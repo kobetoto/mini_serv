@@ -66,8 +66,10 @@ int main(int argc, char **argv)
 		error();
 	if (listen(sockfd, 10) != 0) // done
 		error();
-	
-	FD_ZERO(&fd_on);
+
+
+
+		FD_ZERO(&fd_on);
 	max = sockfd;
 	FD_SET(sockfd, &fd_on);
 	bzero(&clients, sizeof(clients));
