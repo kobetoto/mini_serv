@@ -3,15 +3,15 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <poll.h>
 #include <netdb.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <poll.h>
 
 struct pollfd fds[100];
-int 	nfds = 0;
-int 	ids[100];
-int 	next_id = 0;
+int nfds = 0;
+int ids[100];
+int next_id = 0;
 char *buf[100];
 char box[100000];
 char tmp[100000];
@@ -63,28 +63,27 @@ char *str_join(char *buf, char *add)
 	return (newbuf);
 }
 
-void 	error(){
-	write(2,"Fatal error\n", 12);
+void error(){
+	write(2, "Fatal error\n", 12);
 	exit(1);
 }
 
-void 	broadcast(int skip, char *msg, int len){
+void broadcast(int skip, char *msg, int len){
 	for(int i = 1; i < nfds; i++)
-		if(skip != i && (fds[i].revents & POLLOUT))
+		if(( skip != i) &&  (fds[i].revents & POLLOUT))
 			send(fds[i].fd, msg, len, 0);
 }
 
 int main(int ac, char **av) {
 
-	if(ac != 2){ write(2, "Wrong number of arguments\n", 26); exit(1); }
-
+	if(ac != 2){write(2,"Wrong number of arguments\n", 26); exit(1);}
 	int sockfd;
 	struct sockaddr_in servaddr; 
 
 	// socket create and verification 
 	sockfd = socket(AF_INET, SOCK_STREAM, 0); 
-	if (sockfd == -1) { error(); }
-	
+	if (sockfd == -1) error();
+
 	bzero(&servaddr, sizeof(servaddr)); 
 
 	// assign IP, PORT 
@@ -93,8 +92,9 @@ int main(int ac, char **av) {
 	servaddr.sin_port = htons(atoi(av[1])); 
 
 	// Binding newly created socket to given IP and verification 
-	if ((bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr))) == -1 ) { error(); } 
-	if (listen(sockfd, 10) != 0) { error(); }
+	if ((bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr))) != 0) error(); 
+
+	if (listen(sockfd, 10) != 0) error();
 
 	fds[0].fd = sockfd;
 	fds[0].events = POLLIN;
@@ -102,23 +102,25 @@ int main(int ac, char **av) {
 	++nfds;
 
 	for(;;){
-		
-		if(poll(fds, nfds, -1) == -1){ error(); }
-		
+		if(poll(fds, nfds, -1) == -1) error();
+
 		for(int i = 0; i < nfds; i++){
-			
+
 			if(!(fds[i].revents & POLLIN))
 				continue;
 			if(fds[i].fd == sockfd){
 				int sockCli = accept(sockfd, NULL, NULL);
-				if(sockCli == -1){ continue; }
-				if(nfds >= 100){ close(sockCli); continue; }
-
+				if(sockCli == -1)
+					continue;
+				if(nfds >= 100){
+					close(sockCli);
+					continue;
+				}
 				fds[nfds].fd = sockCli;
 				fds[nfds].events = POLLIN | POLLOUT;
 				fds[nfds].revents = 0;
 				ids[nfds] = next_id;
-				buf[nfds] = NULL; // est ce necessaire? global deja set by default to NULL right?
+				buf[nfds] = NULL;
 				++nfds;
 				++next_id;
 
@@ -133,12 +135,11 @@ int main(int ac, char **av) {
 
 					free(buf[i]);
 					close(fds[i].fd);
-					//swap
 					fds[i] = fds[nfds-1];
-					ids[i] = ids[nfds-1];
 					buf[i] = buf[nfds-1];
-					--nfds; //doute avec next_id...? mais quasi sur que NON
+					ids[i] = ids[nfds-1];
 					--i;
+					--nfds;
 				}
 				else{
 					tmp[n] = 0;
@@ -156,5 +157,5 @@ int main(int ac, char **av) {
 			}
 		}
 	}
-	return (0);
+	return(0);
 }
